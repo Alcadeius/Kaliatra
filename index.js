@@ -12,10 +12,9 @@ app.use(express.json());
 // Inisialisasi Firestore dan Storage
 const db = new Firestore();
 const storage = new Storage();
-const bucketName = "kaliatra"; // Ganti dengan nama bucket Anda
+const bucketName = "kaliatra";
 const bucket = storage.bucket(bucketName);
 
-// Multer untuk penyimpanan sementara file lokal
 const upload = multer({ dest: "uploads/" });
 
 // Endpoint untuk menambahkan kategori baru
@@ -76,10 +75,8 @@ app.post("/api/entry", upload.single("image"), async (req, res) => {
     });
 
     blobStream.on("finish", async () => {
-      // URL publik gambar di GCS
       const publicUrl = `https://storage.googleapis.com/${bucketName}/${uniqueFileName}`;
 
-      // Menyiapkan entri baru
       const newEntry = {
         aksara,
         tulisanlatin,
@@ -89,10 +86,8 @@ app.post("/api/entry", upload.single("image"), async (req, res) => {
         createdAt: new Date().toISOString(),
       };
 
-      // Menyimpan entri ke Firestore
       const docRef = await db.collection("entries").add(newEntry);
 
-      // Menghapus file lokal setelah upload
       fs.unlinkSync(localFilePath);
 
       res.status(201).json({ id: docRef.id, ...newEntry });
@@ -116,6 +111,29 @@ app.get("/api/entry", async (req, res) => {
   } catch (error) {
     console.error("Error mendapatkan entri:", error);
     res.status(500).json({ message: "Gagal mendapatkan entri", error });
+  }
+});
+// Endpoint untuk mendapatkan entri berdasarkan kategori tertentu
+app.get("/api/entry/categories/:category", async (req, res) => {
+  const { category } = req.params;
+  try {
+    const snapshot = await db
+      .collection("entries")
+      .where("category", "==", category)
+      .get();
+    if (snapshot.empty) {
+      return res
+        .status(404)
+        .json({ message: "Tidak ada entri yang ditemukan untuk kategori ini" });
+    }
+
+    const entries = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    res.status(200).json(entries);
+  } catch (error) {
+    console.error("Error mendapatkan entri berdasarkan kategori:", error);
+    res
+      .status(500)
+      .json({ message: "Gagal mendapatkan entri berdasarkan kategori", error });
   }
 });
 
