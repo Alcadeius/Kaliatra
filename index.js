@@ -15,7 +15,10 @@ const storage = new Storage();
 const bucketName = "kaliatra";
 const bucket = storage.bucket(bucketName);
 
-const upload = multer({ dest: "uploads/" });
+// Menggunakan penyimpanan memori
+const upload = multer({
+  storage: multer.memoryStorage(),
+});
 
 // Endpoint untuk menambahkan kategori baru
 app.post("/api/category", async (req, res) => {
@@ -52,48 +55,39 @@ app.get("/api/category", async (req, res) => {
 // Endpoint untuk menambahkan entri baru dengan gambar
 app.post("/api/entry", upload.single("image"), async (req, res) => {
   const { aksara, tulisanlatin, deskripsi, category } = req.body;
-  const file = req.file;
+  const imageBuffer = req.file?.buffer; // Gunakan optional chaining untuk menghindari error jika `req.file` tidak ada
 
-  if (!aksara || !deskripsi || !tulisanlatin || !category || !file) {
+  if (!aksara || !deskripsi || !tulisanlatin || !category || !imageBuffer) {
     return res
       .status(400)
       .json({ message: "Semua data dan gambar harus disertakan" });
   }
 
   try {
-    // Upload gambar ke Google Cloud Storage
-    const localFilePath = file.path;
-    const uniqueFileName = `${Date.now()}-${file.originalname}`;
-    const blob = bucket.file(uniqueFileName);
-    const blobStream = blob.createWriteStream({
+    // Nama file unik berdasarkan timestamp
+    const fileName = `${Date.now()}-${req.file.originalname}`;
+    const file = storage.bucket(bucketName).file(fileName);
+
+    // Simpan file ke Google Cloud Storage menggunakan metode `file.save()`
+    await file.save(imageBuffer, {
+      contentType: req.file.mimetype,
       resumable: false,
     });
 
-    blobStream.on("error", (err) => {
-      console.error("Error mengunggah gambar ke Cloud Storage:", err);
-      res.status(500).json({ message: "Gagal mengunggah gambar", error: err });
-    });
+    const publicUrl = `https://storage.googleapis.com/${bucketName}/${fileName}`;
 
-    blobStream.on("finish", async () => {
-      const publicUrl = `https://storage.googleapis.com/${bucketName}/${uniqueFileName}`;
+    const newEntry = {
+      aksara,
+      tulisanlatin,
+      deskripsi,
+      category,
+      imageUrl: publicUrl,
+      createdAt: new Date().toISOString(),
+    };
 
-      const newEntry = {
-        aksara,
-        tulisanlatin,
-        deskripsi,
-        category,
-        imageUrl: publicUrl,
-        createdAt: new Date().toISOString(),
-      };
+    const docRef = await db.collection("entries").add(newEntry);
 
-      const docRef = await db.collection("entries").add(newEntry);
-
-      fs.unlinkSync(localFilePath);
-
-      res.status(201).json({ id: docRef.id, ...newEntry });
-    });
-
-    blobStream.end(fs.readFileSync(localFilePath));
+    res.status(201).json({ id: docRef.id, ...newEntry });
   } catch (error) {
     console.error("Terjadi kesalahan:", error);
     res
