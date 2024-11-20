@@ -26,14 +26,16 @@ Sebuah API Backend Service yang menyediakan kumpulan aksara-aksara bali.API ini 
 ```
 
 untuk :category bisa disesuaikan dari list dibawah ini
-Aksara + Gantungan/Gempelan Swalalita
-Angka Aksara Bali
-Aksara + Gantungan/Gempelan Wresastra
-Aksara Swara Pendek Hreswa
-Pangangge Ardhaswara
-Pangangge Tengenan
-Aksara Wyanjana Deret Modern Swalalita
-Aksara Wyanjana Deret Modern Wresastra
+# List Kategori Aksara Bali
+
+1. **Aksara + Gantungan/Gempelan Swalalita**
+2. **Angka Aksara Bali**
+3. **Aksara + Gantungan/Gempelan Wresastra**
+4. **Aksara Swara Pendek Hreswa**
+5. **Pangangge Ardhaswara**
+6. **Pangangge Tengenan**
+7. **Aksara Wyanjana Deret Modern Swalalita**
+8. **Aksara Wyanjana Deret Modern Wresastra**
 
 
 ## Run Locally
